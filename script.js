@@ -125,6 +125,10 @@ function init() {
     refreshStarShop();
     setupEventListeners();
     requestAnimationFrame(gameLoop);
+
+    // Prompt for tutorial on every visit
+    const prompt = document.getElementById('tutorial-prompt');
+    if (prompt) prompt.classList.remove('hidden');
 }
 
 function updateUI() {
@@ -710,15 +714,21 @@ function renderTutorialStep() {
 }
 
 function setupEventListeners() {
-    const tutorialBtn = document.getElementById('tutorial-btn');
-    if (tutorialBtn) tutorialBtn.addEventListener('click', openTutorial);
-    
+    // Tutorial Prompt Listeners
+    const prompt = document.getElementById('tutorial-prompt');
+    document.getElementById('prompt-yes').addEventListener('click', () => {
+        prompt.classList.add('hidden');
+        openTutorial();
+    });
+    document.getElementById('prompt-no').addEventListener('click', () => {
+        prompt.classList.add('hidden');
+    });
+
     document.getElementById('tutorial-next').addEventListener('click', () => {
         if (tutorialStep < tutorialSteps.length - 1) {
             tutorialStep++;
             renderTutorialStep();
         } else {
-            localStorage.setItem('tutorialCompleted', 'true');
             tutorialModal.classList.add('hidden');
             document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
         }
@@ -732,7 +742,6 @@ function setupEventListeners() {
     });
 
     document.getElementById('close-tutorial-modal').addEventListener('click', () => {
-        localStorage.setItem('tutorialCompleted', 'true');
         tutorialModal.classList.add('hidden');
         document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
     });

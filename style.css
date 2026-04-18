@@ -812,3 +812,47 @@ footer {
 #tutorial-modal.compact .tutorial-image { font-size: 2.5rem; margin-top: 10px; }
 #tutorial-modal.compact #tutorial-body { font-size: 1rem; min-height: 80px; }
 #tutorial-modal.compact h2 { font-size: 1.2rem; }
+
+/* Tutorial Prompt */
+#tutorial-prompt {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(20px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 4000;
+}
+
+.prompt-btns {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+#prompt-yes, #prompt-no {
+    padding: 15px 25px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 900;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+#prompt-yes {
+    background: var(--accent-primary);
+    color: black;
+}
+
+#prompt-no {
+    background: rgba(255,255,255,0.1);
+    color: white;
+}
+
+#prompt-yes:hover { transform: scale(1.05); box-shadow: 0 0 20px var(--accent-primary); }
+#prompt-no:hover { background: rgba(255,255,255,0.2); }
