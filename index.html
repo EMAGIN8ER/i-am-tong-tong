@@ -23,6 +23,10 @@
                     <span class="icon">⭐</span>
                     <span class="value">0</span>
                 </div>
+                <div class="stat-item" id="lives-display">
+                    <span class="icon">❤️</span>
+                    <span class="value">3</span>
+                </div>
                 <div class="stat-item" id="tip-jar-container">
                     <span class="icon" id="tip-jar-icon">🫙</span>
                     <div class="tip-jar-bar">
@@ -32,17 +36,23 @@
                     <button id="claim-tip-btn" disabled>CLAIM</button>
                 </div>
             </div>
-            <div class="shop-title">TOKO TONG TONG</div>
+            
+            <div class="day-center-display">
+                <div id="day-counter">DAY 1</div>
+                <div id="day-timer">02:30</div>
+            </div>
+
             <div class="header-btns">
                 <button id="neural-permit-btn">NEURAL PERMIT (500 🌕)</button>
                 <button id="food-permit-btn">FOOD PERMIT (250 🌕)</button>
                 <button id="upgrade-menu-btn">UPGRADES</button>
+                <button id="music-toggle-btn">MUSIC: OFF</button>
             </div>
         </header>
 
         <button id="star-shop-btn" class="sidebar-tab shop-tab">
             <div class="shop-tab-text">SHOP</div>
-            <div id="shop-timer">02:30</div>
+            <div id="shop-timer-display">02:30</div>
         </button>
 
         <button id="inventory-btn" class="sidebar-tab inv-tab">
@@ -54,6 +64,11 @@
             <!-- Interaction Area -->
             <div id="customer-area">
                 <!-- Customers will appear here -->
+            </div>
+
+            <!-- Store Clerks Area -->
+            <div id="clerk-area">
+                <!-- Clerks will appear here -->
             </div>
         </main>
 
@@ -112,7 +127,12 @@
             <div class="modal-content">
                 <h2>Shop Upgrades</h2>
                 <div class="upgrade-list">
-                    <!-- Upgrades will be injected here -->
+                    <!-- Upgrades generated here -->
+                </div>
+                <div class="clerk-purchase-section">
+                    <h3>STORE CLERKS</h3>
+                    <div id="clerk-status">0 / 2 Unlocked</div>
+                    <button id="buy-clerk-btn" class="buy-btn">BUY CLERK (10,000 🌕)</button>
                 </div>
                 <button id="close-modal">CLOSE</button>
             </div>
@@ -146,6 +166,53 @@
             </div>
         </div>
 
+        <!-- Game Over Modal -->
+        <div id="game-over-modal" class="hidden">
+            <div class="modal-content star-modal">
+                <h1>GAME OVER</h1>
+                <p>The shop has been shut down due to poor management.</p>
+                <div class="final-stats">
+                    <p>Total Days Survived: <span id="final-day">0</span></p>
+                    <p>Total Moon Tokens: <span id="final-coins">0</span></p>
+                </div>
+                <button onclick="location.reload()">RESTART SIMULATION</button>
+            </div>
+        </div>
+
+        <!-- Clerk Upgrade Modal -->
+        <div id="clerk-upgrade-modal" class="hidden">
+            <div class="modal-content star-modal">
+                <h2>Robotic Maintenance</h2>
+                <div id="clerk-upgrade-list" class="upgrade-list">
+                    <!-- Clerk upgrades will be injected here -->
+                </div>
+                <button id="close-clerk-modal">CLOSE</button>
+            </div>
+        </div>
+
+        <!-- Day Over Modal -->
+        <div id="day-over-modal" class="hidden">
+            <div class="modal-content star-modal">
+                <h1 id="day-over-title">Day 1 Complete!</h1>
+                <div class="day-stats">
+                    <p>Tokens Earned: <span id="day-tokens">0</span> 🌕</p>
+                    <p>Reputation Gained: <span id="day-rep">0</span> ⭐</p>
+                </div>
+                <button id="next-day-btn">START NEXT DAY</button>
+            </div>
+        </div>
+
+        <!-- Continue Modal --> 
+        <div id="continue-modal" class="hidden"> 
+            <div class="modal-content star-modal"> 
+                <h2>Welcome Back, Clerk</h2> 
+                <p id="continue-text">You were last operating on Day 1.</p> 
+                <button id="continue-btn">CONTINUE DAY 1 SHIFT</button> 
+                <button id="restart-btn" style="background: rgba(255, 75, 43, 0.1) !important; border-color: #ff4b2b !important; color: #ff4b2b !important;">RESTART PROGRESS</button> 
+
+            </div> 
+        </div> 
+
         <!-- Tutorial Prompt -->
         <div id="tutorial-prompt" class="hidden">
             <div class="modal-content star-modal">
@@ -154,6 +221,18 @@
                 <div class="prompt-btns">
                     <button id="prompt-yes">YES, START TRAINING</button>
                     <button id="prompt-no">NO, SKIP FOR NOW</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clerk Tutorial Prompt -->
+        <div id="clerk-tutorial-prompt" class="hidden">
+            <div class="modal-content star-modal">
+                <h2>New Employee Onboarding</h2>
+                <p>You've just hired your first robot clerk! Would you like a quick tutorial on how they operate and how to upgrade them?</p>
+                <div class="prompt-btns">
+                    <button id="clerk-prompt-yes">YES, SHOW ME</button>
+                    <button id="clerk-prompt-no">NO, I GOT THIS</button>
                 </div>
             </div>
         </div>
@@ -187,3 +266,14 @@
     <script src="script.js"></script>
 </body>
 </html>
+        <!-- Reset Confirmation Modal -->
+        <div id="reset-confirm-modal" class="hidden">
+            <div class="modal-content star-modal" style="border-color: #ff4b2b;">
+                <h2 style="color: #ff4b2b;">WARNING: SYSTEM RESET</h2>
+                <p>Are you absolutely sure you would like to reset all your progress? This will delete all Tokens, Stars, Upgrades, and Clerks. This action cannot be undone.</p>
+                <div class="prompt-btns">
+                    <button id="confirm-reset-btn" style="background: #ff4b2b !important; color: white !important; border: none !important;">YES, RESET EVERYTHING</button>
+                    <button id="cancel-reset-btn">NO, CANCEL</button>
+                </div>
+            </div>
+        </div>

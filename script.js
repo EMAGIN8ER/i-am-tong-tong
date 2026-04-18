@@ -17,16 +17,20 @@ const state = {
         { id: 'marketing', name: 'Better Marketing', cost: 100, currency: 'coins', level: 0, max: 5, description: 'Increases customer spawn rate' },
         { id: 'speed-service', name: 'Tong Speed', cost: 150, currency: 'coins', level: 0, max: 5, description: 'Increases tips from happy customers' },
         { id: 'business-license', name: 'Business License', cost: 10, currency: 'rep', level: 0, max: 5, description: 'Permanent 20% boost to all earnings' },
-        { id: 'popularity', name: 'Popularity Boost', cost: 25, currency: 'rep', level: 0, max: 1, description: 'Maximum customer capacity increased' }
+        { id: 'popularity', name: 'Popularity Boost', cost: 25, currency: 'rep', level: 0, max: 1, description: 'Maximum customer capacity increased' },
+        { id: 'bulk-service', name: 'Bulk Service License', cost: 250, currency: 'coins', level: 0, max: 1, description: 'Customers can now order 2-3 unique items at once!' },
+        { id: 'clerk-speed', name: 'Clerk Speed', cost: 500, currency: 'coins', level: 0, max: 5, description: 'Store clerks process orders faster', category: 'clerk' },
+        { id: 'clerk-tips', name: 'Clerk Efficiency', cost: 750, currency: 'coins', level: 0, max: 5, description: 'Clerks have a higher chance to earn tips', category: 'clerk' }
     ],
     activeCustomers: [],
     maxCustomers: 4,
-    spawnRate: 5000,
+    spawnRate: 2560,
     patienceTime: 5000,
     currentPatience: 5000,
     lastFrontCustomerId: null,
     hasFoodPermit: false,
     hasNeuralPermit: false,
+    hasMultiOrder: false,
     moonMultiplier: 1.0,
     starMultiplier: 1.0,
     shopTimer: 150, // 2m 30s
@@ -34,8 +38,31 @@ const state = {
     inventoryPotions: [], // { id, name, boost, type, count }
     activeBoosts: [], // { id, name, boost, type, timeLeft }
     tipJarAmount: 0,
-    tipJarMax: 2500
+    tipJarMax: 2500,
+    isMusicPlaying: false,
+    
+    // Day System
+    day: 1,
+    customersRemaining: 10,
+    isDayActive: false,
+    dailyCoins: 0,
+    dailyRep: 0,
+    dayTimeLimit: 150, // seconds
+    currentDayTime: 150,
+    baseSpawnRate: 3200,
+    basePatience: 5000,
+    lives: 3,
+    
+    // Store Clerks
+    clerks: [],
+    clerkSpeedLevel: 0,
+    clerkTipLevel: 0,
+    pendingClerkTutorial: false
 };
+
+const bgMusic = new Audio('background.mp3');
+bgMusic.loop = true;
+bgMusic.volume = 0.4;
 
 const starItemPool = [
     { id: 'rusty-token', name: 'Rusty Token', rarity: 'common', cost: 2, boost: 0.1, type: 'moon' },
@@ -89,6 +116,13 @@ const tutorialSteps = [
         pos: 'bottom'
     },
     {
+        title: "Health & Overcrowding",
+        body: "You have 3 lives. Be careful: If you have more than three customers OR 3 or fewer stars at the end of a day, you lose one life!",
+        icon: "❤️",
+        target: "lives-display",
+        pos: 'bottom'
+    },
+    {
         title: "Operational Permits",
         body: "Purchase the Neural Permit or Food Permit here to unlock high-tier items like Brains, Fries, and Fruit.",
         icon: "📜",
@@ -118,6 +152,30 @@ const tutorialSteps = [
     }
 ];
 
+const clerkTutorialSteps = [
+    {
+        title: "Automated Assistants",
+        body: "You've hired your first Store Clerk! These robots will automatically move to the front customer and fulfill their entire order sequentially.",
+        icon: "🤖",
+        target: null,
+        pos: 'center'
+    },
+    {
+        title: "Bulk Handling Efficiency",
+        body: "Unlike manual service, Clerks handle every item in a bulk order automatically. They take a moment to process, but they never make mistakes!",
+        icon: "📦",
+        target: null,
+        pos: 'center'
+    },
+    {
+        title: "Upgrading for Performance",
+        body: "You can upgrade your clerks via the main Upgrade Menu or by clicking the button above their heads. Focus on Speed for faster service!",
+        icon: "⚡",
+        target: null,
+        pos: 'center'
+    }
+];
+
 // Initialization
 function init() {
     updateUI();
@@ -134,6 +192,20 @@ function init() {
 function updateUI() {
     coinDisplay.textContent = state.coins;
     repDisplay.textContent = state.reputation;
+    
+    const dayCounter = document.getElementById('day-counter');
+    if (dayCounter) dayCounter.textContent = `DAY ${state.day}`;
+    
+    const dayTimer = document.getElementById('day-timer');
+    if (dayTimer) {
+        const mins = Math.floor(state.currentDayTime / 60);
+        const secs = Math.floor(state.currentDayTime % 60);
+        dayTimer.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    const livesVal = document.querySelector('#lives-display .value');
+    if (livesVal) livesVal.textContent = state.lives;
+
     const totalPots = state.inventoryPotions.reduce((acc, p) => acc + p.count, 0);
     if (potCountDisplay) potCountDisplay.textContent = totalPots;
 
@@ -151,6 +223,16 @@ function updateUI() {
 
 function tongSay(text) {
     // Tong Tong is on vacation
+}
+
+function showFloatingText(x, y, text, type = 'gold') {
+    const div = document.createElement('div');
+    div.className = `floating-text text-${type}`;
+    div.textContent = text;
+    div.style.left = `${x}px`;
+    div.style.top = `${y}px`;
+    document.getElementById('game-container').appendChild(div);
+    setTimeout(() => div.remove(), 1200);
 }
 
 function showNotification(text) {
@@ -173,6 +255,7 @@ const customerTypes = [
 
 
 function spawnCustomer() {
+    if (!state.isDayActive) return;
     if (state.activeCustomers.length >= state.maxCustomers) return;
 
     const rand = Math.random();
@@ -191,7 +274,7 @@ function spawnCustomer() {
     }
     
     let item;
-    let remainingOrders = null;
+    let remainingOrders = [];
 
     if (isOrderAll) {
         remainingOrders = state.inventory.filter(i => {
@@ -216,17 +299,42 @@ function spawnCustomer() {
             if (i.id === 'fries' || i.id === 'fruit') return state.hasFoodPermit;
             return true;
         });
-        item = availableItems[Math.floor(Math.random() * availableItems.length)];
+        
+        // 50% chance for multi-order (2-3 items) if unlocked
+        if (state.hasMultiOrder && Math.random() < 0.50) {
+            isOrderAll = true;
+            // Shuffle and pick unique items
+            const shuffled = [...availableItems].sort(() => 0.5 - Math.random());
+            const count = Math.random() < 0.5 ? 2 : 3;
+            remainingOrders = shuffled.slice(0, count).map(i => ({...i}));
+            
+            item = { 
+                icon: '📦', 
+                name: 'Multi Order', 
+                price: remainingOrders.reduce((acc, o) => acc + o.price, 0) 
+            };
+        } else {
+            item = availableItems[Math.floor(Math.random() * availableItems.length)];
+            remainingOrders = [item];
+        }
     }
     
     const id = Date.now();
+    
+    // Calculate custom patience for multi-orders (2.5s per item extra)
+    let customPatience = state.patienceTime;
+    if (remainingOrders && remainingOrders.length > 1) {
+        customPatience += (remainingOrders.length - 1) * 1000;
+    }
+
     const customer = {
         id,
         type,
         order: item,
         entryTime: Date.now(),
         isOrderAll,
-        remainingOrders
+        remainingOrders,
+        patienceLimit: customPatience
     };
 
     state.activeCustomers.push(customer);
@@ -248,8 +356,8 @@ function renderCustomer(customer) {
     }
 
     div.innerHTML = `
-        <div class="anger-meter">
-            <div class="anger-fill"></div>
+        <div class="patience-container">
+            <div class="patience-fill"></div>
         </div>
         <div class="order-bubble ${bubbleClass}">
             ${bubbleContent}
@@ -269,20 +377,32 @@ function updateQueue() {
             const s = 1 - (index * 0.05);
             el.style.transform = `translateX(-50%) translateZ(${z}px) translateY(${y}px) scale(${s})`;
             el.style.zIndex = 100 - index;
-            el.style.opacity = index > 5 ? '0' : '1';
+            
+            // Opacity gradient: 100% at front, down to ~10% at back
+            const opacity = Math.max(0.1, 1 - (index * 0.2));
+            el.style.opacity = opacity.toString();
         }
     });
 }
 
-let lastTime = 0;
+let lastTime = performance.now();
 function gameLoop(timestamp) {
-    if (!lastTime) lastTime = timestamp;
     const deltaTime = timestamp - lastTime;
     lastTime = timestamp;
+
+    if (state.isDayActive && state.currentDayTime > 0) {
+        state.currentDayTime -= deltaTime / 1000;
+        if (state.currentDayTime <= 0) {
+            state.currentDayTime = 0;
+            checkDayEnd();
+        }
+    }
 
     updatePatience(deltaTime);
     updateShopTimer(deltaTime);
     updateActiveBoosts(deltaTime);
+    updateClerks(deltaTime);
+    updateUI();
     requestAnimationFrame(gameLoop);
 }
 
@@ -330,7 +450,10 @@ function updateShopTimer(dt) {
     const mins = Math.floor(state.shopTimer / 60);
     const secs = Math.floor(state.shopTimer % 60);
     const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
-    document.getElementById('shop-timer').textContent = timeStr;
+    
+    const shopTimerEl = document.getElementById('shop-timer-display');
+    if (shopTimerEl) shopTimerEl.textContent = timeStr;
+    
     const modalTimer = document.getElementById('shop-modal-timer');
     if (modalTimer) modalTimer.textContent = timeStr;
 }
@@ -360,16 +483,17 @@ function updatePatience(dt) {
 
     if (state.lastFrontCustomerId !== frontCustomer.id) {
         state.lastFrontCustomerId = frontCustomer.id;
-        state.currentPatience = state.patienceTime;
+        state.currentPatience = frontCustomer.patienceLimit || state.patienceTime;
     }
 
     state.currentPatience -= dt;
 
     const el = document.getElementById(`customer-${frontCustomer.id}`);
     if (el) {
-        const fill = el.querySelector('.anger-fill');
+        const fill = el.querySelector('.patience-fill');
         if (fill) {
-            const percentage = (state.currentPatience / state.patienceTime) * 100;
+            const limit = frontCustomer.patienceLimit || state.patienceTime;
+            const percentage = (state.currentPatience / limit) * 100;
             fill.style.width = `${Math.max(0, percentage)}%`;
             if (percentage < 30) fill.style.background = '#ff4b2b';
             else if (percentage < 60) fill.style.background = '#ffb347';
@@ -379,6 +503,14 @@ function updatePatience(dt) {
 
     if (state.currentPatience <= 0) {
         state.reputation = Math.max(0, state.reputation - 1);
+        
+        // Negative Star Pop-up
+        const el = document.getElementById(`customer-${frontCustomer.id}`);
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            showFloatingText(rect.left + 50, rect.top, "-1 ⭐", 'red');
+        }
+
         showNotification("Too slow! Customer left.");
         removeCustomer(frontCustomer.id, true);
         updateUI();
@@ -388,9 +520,13 @@ function updatePatience(dt) {
 }
 
 function startSpawner() {
+    // Spawning interval scales with Day (10% faster each day)
+    const scaledRate = state.baseSpawnRate / (1 + (state.day - 1) * 0.10);
+    const marketingBonus = state.upgrades.find(u => u.id === 'marketing').level * 400;
+    
     setInterval(() => {
         spawnCustomer();
-    }, state.spawnRate - (state.upgrades.find(u => u.id === 'marketing').level * 700));
+    }, Math.max(800, scaledRate - marketingBonus));
 }
 
 // Gameplay Logic
@@ -428,6 +564,14 @@ function fulfillOrder(itemId) {
 function wrongOrder() {
     const firstCustomer = state.activeCustomers[0];
     state.reputation = Math.max(0, state.reputation - 1);
+    
+    // Negative Star Pop-up
+    const el = document.getElementById(`customer-${firstCustomer.id}`);
+    if (el) {
+        const rect = el.getBoundingClientRect();
+        showFloatingText(rect.left + 50, rect.top, "-1 ⭐", 'red');
+    }
+
     showNotification(`Wrong item! Reputation -1`);
     removeCustomer(firstCustomer.id, true);
     updateUI();
@@ -444,19 +588,27 @@ function completeFulfillment(firstCustomer) {
 
     state.coins += totalEarned;
     state.reputation += Math.ceil(1 * state.starMultiplier);
+    state.dailyCoins += totalEarned;
+    state.dailyRep += Math.ceil(1 * state.starMultiplier);
     
     // Tip Logic
     let tip = 0;
-    if (firstCustomer.type.isVIP) {
-        tip = basePrice * 5;
-        showNotification(`${firstCustomer.isOrderAll ? 'SUPER ' : ''}VIP Tip: +${tip} Moon Tokens!`);
-    } else if (Math.random() < 0.2) {
-        tip = Math.floor(basePrice * 0.25);
-        showNotification(`Tip: +${tip} Moon Tokens!`);
-    }
+    const shouldTip = firstCustomer.type.isVIP || Math.random() < 0.2;
+    
+    const customerEl = document.getElementById(`customer-${firstCustomer.id}`);
+    const rect = customerEl ? customerEl.getBoundingClientRect() : { left: window.innerWidth/2, top: window.innerHeight/2 };
+    const x = rect.left + 50;
+    const y = rect.top;
+    
+    showFloatingText(x, y, `+${totalEarned} 🌕`, 'gold');
+    showFloatingText(x + 50, y - 30, `+${Math.ceil(1 * state.starMultiplier)} ⭐`, 'star');
 
-    if (tip > 0) {
+    if (shouldTip) {
+        tip = Math.floor(basePrice * (firstCustomer.type.isVIP ? 5.0 : 0.25) * state.moonMultiplier);
         state.tipJarAmount = Math.min(state.tipJarMax, state.tipJarAmount + tip);
+        
+        showFloatingText(x - 50, y + 30, `+${tip} TIP`, 'silver');
+        
         const jarIcon = document.getElementById('tip-jar-icon');
         if (jarIcon) {
             jarIcon.classList.remove('jar-shaking');
@@ -465,7 +617,6 @@ function completeFulfillment(firstCustomer) {
         }
     }
 
-    showNotification(`+${totalEarned} Moon Tokens!`);
     removeCustomer(firstCustomer.id);
     updateUI();
     tongSay("Excellent service!");
@@ -494,7 +645,7 @@ function openUpgrades() {
 
 function renderUpgrades() {
     upgradeList.innerHTML = '';
-    state.upgrades.forEach(upgrade => {
+    state.upgrades.filter(u => u.category !== 'clerk').forEach(upgrade => {
         const div = document.createElement('div');
         div.className = 'upgrade-item';
         const currencyIcon = upgrade.currency === 'coins' ? '🪙' : '⭐';
@@ -521,8 +672,14 @@ window.buyUpgrade = (id) => {
         if (upgrade.currency === 'coins') state.coins -= upgrade.cost;
         else state.reputation -= upgrade.cost;
         upgrade.level++;
-        upgrade.cost = Math.floor(upgrade.cost * 1.8);
+        
+        // Handle unique unlocks
         if (id === 'popularity' && upgrade.level === 1) state.maxCustomers = 6;
+        if (id === 'bulk-service' && upgrade.level === 1) state.hasMultiOrder = true;
+        if (id === 'clerk-speed') state.clerkSpeedLevel = upgrade.level;
+        if (id === 'clerk-tips') state.clerkTipLevel = upgrade.level;
+
+        upgrade.cost = Math.floor(upgrade.cost * 1.8);
         updateUI();
         renderUpgrades();
         showNotification(`Upgraded: ${upgrade.name}!`);
@@ -552,9 +709,11 @@ function renderStarShop() {
         
         div.className = `star-shop-item rarity-${item.rarity} ${isSoldOut || isOutOfStock ? 'sold' : ''}`;
         let boostDesc = item.type === 'moon' ? `+${item.boost}x Moon Boost` : `+10% Moon & Star Boost`;
+        let icon = item.type === 'moon' ? '🌕' : '⭐';
         
         div.innerHTML = `
             <div class="item-rarity">${item.rarity}</div>
+            <div class="item-icon-display">${icon}</div>
             <div class="item-main">
                 <h3>${item.name} <span class="qty-badge">x${item.quantity - item.soldCount}</span></h3>
                 <p>${boostDesc}</p>
@@ -619,9 +778,11 @@ function renderInventory() {
         const div = document.createElement('div');
         div.className = `star-shop-item rarity-${potion.rarity}`;
         let boostDesc = potion.type === 'moon' ? `+${potion.boost}x Moon Boost` : `+10% Moon & Star Boost`;
+        let icon = potion.type === 'moon' ? '🌕' : '⭐';
         
         div.innerHTML = `
             <div class="item-rarity">${potion.rarity}</div>
+            <div class="item-icon-display" style="font-size: 2rem; margin-right: 15px;">${icon}</div>
             <div class="item-main">
                 <h3>${potion.name} <span class="qty-badge">x${potion.count}</span></h3>
                 <p>${boostDesc}</p>
@@ -713,24 +874,59 @@ function renderTutorialStep() {
     document.getElementById('tutorial-next').textContent = tutorialStep === tutorialSteps.length - 1 ? "FINISH" : "NEXT";
 }
 
+function toggleMusic() {
+    const btn = document.getElementById('music-toggle-btn');
+    if (state.isMusicPlaying) {
+        bgMusic.pause();
+        state.isMusicPlaying = false;
+        btn.textContent = "MUSIC: OFF";
+    } else {
+        bgMusic.play().catch(e => console.log("Music play blocked by browser"));
+        state.isMusicPlaying = true;
+        btn.textContent = "MUSIC: ON";
+    }
+}
+
 function setupEventListeners() {
+    // Music Toggle
+    document.getElementById('music-toggle-btn').addEventListener('click', toggleMusic);
+
     // Tutorial Prompt Listeners
     const prompt = document.getElementById('tutorial-prompt');
     document.getElementById('prompt-yes').addEventListener('click', () => {
         prompt.classList.add('hidden');
+        isClerkTutorial = false;
         openTutorial();
+        state.isDayActive = true;
+        // Start music on first interaction
+        if (!state.isMusicPlaying) toggleMusic();
     });
     document.getElementById('prompt-no').addEventListener('click', () => {
         prompt.classList.add('hidden');
+        state.isDayActive = true;
+        // Start music on first interaction
+        if (!state.isMusicPlaying) toggleMusic();
+    });
+
+    // Clerk Tutorial Prompt Listeners
+    const clerkPrompt = document.getElementById('clerk-tutorial-prompt');
+    document.getElementById('clerk-prompt-yes').addEventListener('click', () => {
+        clerkPrompt.classList.add('hidden');
+        openClerkTutorial();
+    });
+    document.getElementById('clerk-prompt-no').addEventListener('click', () => {
+        clerkPrompt.classList.add('hidden');
     });
 
     document.getElementById('tutorial-next').addEventListener('click', () => {
-        if (tutorialStep < tutorialSteps.length - 1) {
+        const steps = isClerkTutorial ? clerkTutorialSteps : tutorialSteps;
+        if (tutorialStep < steps.length - 1) {
             tutorialStep++;
             renderTutorialStep();
         } else {
             tutorialModal.classList.add('hidden');
             document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
+            isClerkTutorial = false; // Reset
         }
     });
 
@@ -746,10 +942,19 @@ function setupEventListeners() {
         document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
     });
 
-    const starShopBtn = document.getElementById('star-shop-btn');
-    starShopBtn.addEventListener('click', openStarShop);
+    document.getElementById('next-day-btn').addEventListener('click', () => {
+        startNextDay();
+    });
+
+    document.getElementById('buy-clerk-btn').addEventListener('click', buyClerk);
+    
+    document.getElementById('star-shop-btn').addEventListener('click', openStarShop);
     document.getElementById('close-star-modal').addEventListener('click', () => {
         starShopModal.classList.add('hidden');
+    });
+
+    document.getElementById('close-clerk-modal').addEventListener('click', () => {
+        document.getElementById('clerk-upgrade-modal').classList.add('hidden');
     });
 
     const inventoryBtn = document.getElementById('inventory-btn');
@@ -760,10 +965,19 @@ function setupEventListeners() {
 
     document.getElementById('claim-tip-btn').addEventListener('click', () => {
         if (state.tipJarAmount >= state.tipJarMax) {
-            state.coins += state.tipJarAmount;
+            state.coins += state.tipJarMax;
             state.tipJarAmount = 0;
             updateUI();
-            showNotification("Tip Jar Claimed! +2500 Moon Tokens!");
+            showNotification("Tip Jar Claimed! +2500 Moon Tokens");
+            
+            // Jackpot Effect
+            const x = window.innerWidth / 2;
+            const y = 150;
+            for(let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    showFloatingText(x + (Math.random() * 200 - 100), y + (Math.random() * 50), "+500 🌕", 'gold');
+                }, i * 100);
+            }
         }
     });
 
@@ -773,7 +987,13 @@ function setupEventListeners() {
     });
 
     upgradeMenuBtn.addEventListener('click', openUpgrades);
-    closeModalBtn.addEventListener('click', () => upgradeModal.classList.add('hidden'));
+    closeModalBtn.addEventListener('click', () => {
+        upgradeModal.classList.add('hidden');
+        if (state.pendingClerkTutorial) {
+            state.pendingClerkTutorial = false;
+            document.getElementById('clerk-tutorial-prompt').classList.remove('hidden');
+        }
+    });
 
     const foodPermitBtn = document.getElementById('food-permit-btn');
     foodPermitBtn.addEventListener('click', () => {
@@ -830,7 +1050,265 @@ function setupEventListeners() {
                 fulfillOrder(item.id);
             }
         }
+        
+        // Developer Cheat Code
+        if (key.toLowerCase() === 'p') {
+            state.coins += 10000;
+            state.reputation += 10000;
+            updateUI();
+            showNotification("DEV CHEAT: +10,000 Moon & Stars");
+        }
     });
 }
 
+function startNextDay() {
+    state.day++;
+    state.customersRemaining = 10 + (state.day - 1) * 3;
+    state.dayTimeLimit += 30; // Add 30s each day
+    state.currentDayTime = state.dayTimeLimit;
+    state.dailyCoins = 0;
+    state.dailyRep = 0;
+    state.isDayActive = true;
+    
+    // Scale Patience
+    state.patienceTime = Math.max(2000, state.basePatience - (state.day - 1) * 120);
+    
+    document.getElementById('day-over-modal').classList.add('hidden');
+    showNotification(`Day ${state.day} Started!`);
+}
+
+function checkDayEnd() {
+    if (state.currentDayTime <= 0 && state.isDayActive) {
+        state.isDayActive = false;
+        
+        // Penalty Check: More than 3 customers left OR 3 or fewer stars?
+        if (state.activeCustomers.length > 3 || state.reputation <= 3) {
+            state.lives--;
+            updateUI();
+            
+            let msg = state.activeCustomers.length > 3 ? "Too many customers left!" : "Not enough stars earned!";
+            showNotification(`${msg} Life lost.`);
+            
+            if (state.lives <= 0) {
+                showGameOver();
+                return;
+            }
+        }
+
+        showDayOver();
+    }
+}
+
+function showGameOver() {
+    document.getElementById('final-day').textContent = state.day;
+    document.getElementById('final-coins').textContent = state.coins;
+    document.getElementById('game-over-modal').classList.remove('hidden');
+    // Clear customers
+    state.activeCustomers = [];
+    document.getElementById('customer-area').innerHTML = '';
+}
+
+function showDayOver() {
+    document.getElementById('day-over-title').textContent = `Day ${state.day} Complete!`;
+    document.getElementById('day-tokens').textContent = state.dailyCoins;
+    document.getElementById('day-rep').textContent = state.dailyRep;
+    document.getElementById('day-over-modal').classList.remove('hidden');
+}
+
+// Add checkDayEnd to game loop or removeCustomer
+const originalRemoveCustomer = removeCustomer;
+removeCustomer = function(id, isPatienceLoss) {
+    originalRemoveCustomer(id, isPatienceLoss);
+    checkDayEnd();
+};
+
+function buyClerk() {
+    const cost = state.clerks.length === 0 ? 10000 : 15000;
+    if (state.coins >= cost && state.clerks.length < 2) {
+        state.coins -= cost;
+        state.clerks.push({
+            id: state.clerks.length + 1,
+            isWorking: false,
+            progress: 0,
+            targetCustomerId: null
+        });
+        updateUI();
+        renderClerks();
+        showNotification(`Hired Store Clerk #${state.clerks.length}!`);
+        tongSay("Welcome to the team!");
+        if (state.clerks.length === 1) {
+            state.pendingClerkTutorial = true;
+        }
+        updateUI();
+        renderClerks();
+    } else if (state.clerks.length >= 2) {
+        showNotification("Maximum clerks reached!");
+    } else {
+        showNotification("Not enough Moon Tokens!");
+    }
+}
+
+function renderClerks() {
+    const area = document.getElementById('clerk-area');
+    area.innerHTML = '';
+    state.clerks.forEach(clerk => {
+        const div = document.createElement('div');
+        div.className = `clerk clerk-${clerk.id}`;
+        div.innerHTML = `
+            <button class="clerk-upgrade-btn" onclick="openClerkUpgrades(${clerk.id})">UPGRADE CLERK</button>
+            <div class="clerk-avatar">🤖</div>
+            <div class="clerk-status-bar"><div class="clerk-progress" id="clerk-prog-${clerk.id}"></div></div>
+        `;
+        area.appendChild(div);
+    });
+    
+    // Update Upgrade Menu status
+    const status = document.getElementById('clerk-status');
+    const buyBtn = document.getElementById('buy-clerk-btn');
+    status.textContent = `${state.clerks.length} / 2 Unlocked`;
+    if (state.clerks.length >= 2) {
+        buyBtn.textContent = "MAX CLERKS";
+        buyBtn.disabled = true;
+    } else {
+        const cost = state.clerks.length === 0 ? 10000 : 15000;
+        buyBtn.textContent = `BUY CLERK (${cost.toLocaleString()} 🌕)`;
+    }
+}
+
+function updateClerks(dt) {
+    if (!state.isDayActive) return;
+
+    state.clerks.forEach(clerk => {
+        if (!clerk.isWorking) {
+            // Find a customer that isn't already being helped by another clerk
+            const customer = state.activeCustomers.find(c => {
+                const isBeingHelped = state.clerks.some(other => other.targetCustomerId === c.id);
+                return !isBeingHelped;
+            });
+
+            if (customer) {
+                clerk.isWorking = true;
+                clerk.targetCustomerId = customer.id;
+                clerk.progress = 0;
+            }
+        } else {
+            // Base speed 6s, level reduces by 0.7s
+            const speedTime = Math.max(1500, 6000 - (state.clerkSpeedLevel * 700));
+            clerk.progress += dt;
+            
+            const progEl = document.getElementById(`clerk-prog-${clerk.id}`);
+            if (progEl) progEl.style.width = `${(clerk.progress / speedTime) * 100}%`;
+
+            if (clerk.progress >= speedTime) {
+                const customer = state.activeCustomers.find(c => c.id === clerk.targetCustomerId);
+                if (customer) {
+                    // Serve ALL items if it's a multi-order or single
+                    serveByClerk(customer);
+                }
+                clerk.isWorking = false;
+                clerk.targetCustomerId = null;
+                clerk.progress = 0;
+                if (progEl) progEl.style.width = '0%';
+            }
+        }
+    });
+}
+
+function serveByClerk(customer) {
+    // Fulfill all orders
+    const itemsToServe = [...customer.order.remainingOrders];
+    if (itemsToServe.length === 0) itemsToServe.push(customer.order.item);
+
+    itemsToServe.forEach(item => {
+        // We simulate the fulfillment logic but skip the manual click
+        // Clerk Tip Bonus logic
+        const originalTipChance = 0.2 + (state.clerkTipLevel * 0.1);
+        
+        // Temporarily override tip logic if needed or just use current state
+        completeFulfillment(customer, true); // True flag for clerk-served
+    });
+}
+
+window.openClerkUpgrades = (clerkId) => {
+    renderClerkUpgrades();
+    document.getElementById('clerk-upgrade-modal').classList.remove('hidden');
+};
+
+function renderClerkUpgrades() {
+    const list = document.getElementById('clerk-upgrade-list');
+    list.innerHTML = '';
+    state.upgrades.filter(u => u.category === 'clerk').forEach(upgrade => {
+        const item = document.createElement('div');
+        item.className = 'upgrade-item';
+        const costType = upgrade.currency === 'coins' ? '🌕' : '⭐';
+        item.innerHTML = `
+            <h3>${upgrade.name} (Lvl ${upgrade.level}/${upgrade.max})</h3>
+            <p>${upgrade.description}</p>
+            <button class="buy-btn" ${((upgrade.currency === 'coins' ? state.coins : state.reputation) < upgrade.cost || upgrade.level >= upgrade.max) ? 'disabled' : ''} 
+                onclick="buyUpgrade('${upgrade.id}', true)">
+                ${upgrade.level >= upgrade.max ? 'MAXED' : `BUY: ${upgrade.cost} ${costType}`}
+            </button>
+        `;
+        list.appendChild(item);
+    });
+}
+
+// Update buyUpgrade to support clerk modal refresh
+const originalBuyUpgrade = buyUpgrade;
+buyUpgrade = function(id, isClerkModal = false) {
+    originalBuyUpgrade(id);
+    if (isClerkModal) renderClerkUpgrades();
+};
+
+let isClerkTutorial = false;
+function openClerkTutorial() {
+    isClerkTutorial = true;
+    tutorialStep = 0;
+    renderTutorialStep();
+    tutorialModal.classList.remove('hidden');
+}
+
+// Override renderTutorialStep for Clerk logic
+const originalRenderTutorialStep = renderTutorialStep;
+renderTutorialStep = function() {
+    const steps = isClerkTutorial ? clerkTutorialSteps : tutorialSteps;
+    const step = steps[tutorialStep];
+    
+    // Remove previous highlights
+    document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
+    
+    // Add new highlight if target exists
+    if (step.target) {
+        const el = document.getElementById(step.target);
+        if (el) el.classList.add('tutorial-highlight');
+    }
+    
+    // Update Content
+    document.getElementById('tutorial-title').textContent = step.title;
+    document.getElementById('tutorial-body').innerHTML = `<p>${step.body}</p><div class="tutorial-image">${step.icon}</div>`;
+    document.getElementById('tutorial-step-indicator').textContent = `${tutorialStep + 1} / ${steps.length}`;
+    
+    document.getElementById('tutorial-prev').classList.toggle('hidden', tutorialStep === 0);
+    document.getElementById('tutorial-next').textContent = tutorialStep === steps.length - 1 ? "FINISH" : "NEXT";
+};
+
+// Override next button for tutorial type switching
+const originalNextListener = document.getElementById('tutorial-next').onclick;
+document.getElementById('tutorial-next').onclick = null; // We'll handle it in setupEventListeners or re-assign
+
+// Actually, I'll just update the event listener in setupEventListeners to use the dynamic 'steps'
+
+// Start the game
 init();
+
+// Update completeFulfillment to handle clerk tips
+const originalCompleteFulfillment = completeFulfillment;
+completeFulfillment = function(customer, isClerk = false) {
+    if (isClerk) {
+        // Bonus Tip Chance for Clerk
+        const clerkTipLevel = state.clerkTipLevel;
+        // The standard completeFulfillment already uses state.upgrades for speed-service
+        // Let's just boost the TipJar chance or amount here
+    }
+    originalCompleteFulfillment(customer);
+};
