@@ -578,7 +578,11 @@ function wrongOrder() {
     tongSay("Oops! Wrong item.");
 }
 
-function completeFulfillment(firstCustomer) {
+function completeFulfillment(firstCustomer, isClerk = false) {
+    if (isClerk) {
+        // Bonus Tip logic for Clerks
+        // Clerks use the same logic as manual, but we can add specific bonuses here if desired
+    }
     const basePrice = firstCustomer.order.price;
     const tipLevel = state.upgrades.find(u => u.id === 'speed-service').level;
     const licenseLevel = state.upgrades.find(u => u.id === 'business-license').level;
@@ -634,6 +638,7 @@ function removeCustomer(id, wasAngry = false) {
             setTimeout(() => el.remove(), 600);
         }
         updateQueue();
+        checkDayEnd();
     }
 }
 
@@ -682,6 +687,7 @@ window.buyUpgrade = (id) => {
         upgrade.cost = Math.floor(upgrade.cost * 1.8);
         updateUI();
         renderUpgrades();
+        if (upgrade.category === 'clerk') renderClerkUpgrades();
         showNotification(`Upgraded: ${upgrade.name}!`);
         tongSay("A fine investment!");
     }
@@ -851,27 +857,25 @@ function openTutorial() {
 }
 
 function renderTutorialStep() {
-    const step = tutorialSteps[tutorialStep];
+    const steps = isClerkTutorial ? clerkTutorialSteps : tutorialSteps;
+    const step = steps[tutorialStep];
     
-    // Remove previous highlights and positions
+    // Remove previous highlights
     document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
-    tutorialModal.classList.remove('pos-top', 'pos-bottom', 'pos-left', 'pos-right', 'pos-center', 'compact');
     
-    // Add new highlight and position
+    // Add new highlight if target exists
     if (step.target) {
         const el = document.getElementById(step.target);
         if (el) el.classList.add('tutorial-highlight');
-        tutorialModal.classList.add('compact');
     }
     
-    tutorialModal.classList.add(`pos-${step.pos}`);
-
+    // Update Content
     document.getElementById('tutorial-title').textContent = step.title;
     document.getElementById('tutorial-body').innerHTML = `<p>${step.body}</p><div class="tutorial-image">${step.icon}</div>`;
-    document.getElementById('tutorial-step-indicator').textContent = `${tutorialStep + 1} / ${tutorialSteps.length}`;
+    document.getElementById('tutorial-step-indicator').textContent = `${tutorialStep + 1} / ${steps.length}`;
     
     document.getElementById('tutorial-prev').classList.toggle('hidden', tutorialStep === 0);
-    document.getElementById('tutorial-next').textContent = tutorialStep === tutorialSteps.length - 1 ? "FINISH" : "NEXT";
+    document.getElementById('tutorial-next').textContent = tutorialStep === steps.length - 1 ? "FINISH" : "NEXT";
 }
 
 function toggleMusic() {
@@ -1051,13 +1055,6 @@ function setupEventListeners() {
             }
         }
         
-        // Developer Cheat Code
-        if (key.toLowerCase() === 'p') {
-            state.coins += 10000;
-            state.reputation += 10000;
-            updateUI();
-            showNotification("DEV CHEAT: +10,000 Moon & Stars");
-        }
     });
 }
 
@@ -1115,12 +1112,7 @@ function showDayOver() {
     document.getElementById('day-over-modal').classList.remove('hidden');
 }
 
-// Add checkDayEnd to game loop or removeCustomer
-const originalRemoveCustomer = removeCustomer;
-removeCustomer = function(id, isPatienceLoss) {
-    originalRemoveCustomer(id, isPatienceLoss);
-    checkDayEnd();
-};
+
 
 function buyClerk() {
     const cost = state.clerks.length === 0 ? 10000 : 15000;
@@ -1215,17 +1207,14 @@ function updateClerks(dt) {
 }
 
 function serveByClerk(customer) {
+    if (!customer || !customer.order) return;
+    
     // Fulfill all orders
-    const itemsToServe = [...customer.order.remainingOrders];
-    if (itemsToServe.length === 0) itemsToServe.push(customer.order.item);
+    const itemsToServe = [...(customer.order.remainingOrders || [])];
+    if (itemsToServe.length === 0 && customer.order.item) itemsToServe.push(customer.order.item);
 
     itemsToServe.forEach(item => {
-        // We simulate the fulfillment logic but skip the manual click
-        // Clerk Tip Bonus logic
-        const originalTipChance = 0.2 + (state.clerkTipLevel * 0.1);
-        
-        // Temporarily override tip logic if needed or just use current state
-        completeFulfillment(customer, true); // True flag for clerk-served
+        completeFulfillment(customer, true);
     });
 }
 
@@ -1253,13 +1242,6 @@ function renderClerkUpgrades() {
     });
 }
 
-// Update buyUpgrade to support clerk modal refresh
-const originalBuyUpgrade = buyUpgrade;
-buyUpgrade = function(id, isClerkModal = false) {
-    originalBuyUpgrade(id);
-    if (isClerkModal) renderClerkUpgrades();
-};
-
 let isClerkTutorial = false;
 function openClerkTutorial() {
     isClerkTutorial = true;
@@ -1268,47 +1250,5 @@ function openClerkTutorial() {
     tutorialModal.classList.remove('hidden');
 }
 
-// Override renderTutorialStep for Clerk logic
-const originalRenderTutorialStep = renderTutorialStep;
-renderTutorialStep = function() {
-    const steps = isClerkTutorial ? clerkTutorialSteps : tutorialSteps;
-    const step = steps[tutorialStep];
-    
-    // Remove previous highlights
-    document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
-    
-    // Add new highlight if target exists
-    if (step.target) {
-        const el = document.getElementById(step.target);
-        if (el) el.classList.add('tutorial-highlight');
-    }
-    
-    // Update Content
-    document.getElementById('tutorial-title').textContent = step.title;
-    document.getElementById('tutorial-body').innerHTML = `<p>${step.body}</p><div class="tutorial-image">${step.icon}</div>`;
-    document.getElementById('tutorial-step-indicator').textContent = `${tutorialStep + 1} / ${steps.length}`;
-    
-    document.getElementById('tutorial-prev').classList.toggle('hidden', tutorialStep === 0);
-    document.getElementById('tutorial-next').textContent = tutorialStep === steps.length - 1 ? "FINISH" : "NEXT";
-};
-
-// Override next button for tutorial type switching
-const originalNextListener = document.getElementById('tutorial-next').onclick;
-document.getElementById('tutorial-next').onclick = null; // We'll handle it in setupEventListeners or re-assign
-
-// Actually, I'll just update the event listener in setupEventListeners to use the dynamic 'steps'
-
 // Start the game
 init();
-
-// Update completeFulfillment to handle clerk tips
-const originalCompleteFulfillment = completeFulfillment;
-completeFulfillment = function(customer, isClerk = false) {
-    if (isClerk) {
-        // Bonus Tip Chance for Clerk
-        const clerkTipLevel = state.clerkTipLevel;
-        // The standard completeFulfillment already uses state.upgrades for speed-service
-        // Let's just boost the TipJar chance or amount here
-    }
-    originalCompleteFulfillment(customer);
-};
