@@ -602,15 +602,7 @@ button, .buy-btn, .buy-star-btn, #close-modal, #close-star-modal, #close-invento
     font-size: 1rem !important;
 }
 
-/* Spotlight Tutorial Effect */
-.tutorial-highlight {
-    position: relative !important;
-    z-index: 9999 !important;
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4) !important;
-    border: 3px solid var(--accent-primary) !important;
-    border-radius: 15px !important;
-    pointer-events: none;
-}
+
 
 #tutorial-modal {
     background: rgba(0, 0, 0, 0.2) !important;

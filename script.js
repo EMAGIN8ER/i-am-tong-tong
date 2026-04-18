@@ -1184,11 +1184,22 @@ function updateClerks(dt) {
                 clerk.progress = 0;
             }
         } else {
+            // Check if customer left while working
+            const customerExists = state.activeCustomers.some(c => c.id === clerk.targetCustomerId);
+            const progEl = document.getElementById(`clerk-prog-${clerk.id}`);
+            
+            if (!customerExists) {
+                clerk.isWorking = false;
+                clerk.targetCustomerId = null;
+                clerk.progress = 0;
+                if (progEl) progEl.style.width = '0%';
+                return; // Skip rest of loop for this clerk
+            }
+
             // Base speed 6s, level reduces by 0.7s
             const speedTime = Math.max(1500, 6000 - (state.clerkSpeedLevel * 700));
             clerk.progress += dt;
             
-            const progEl = document.getElementById(`clerk-prog-${clerk.id}`);
             if (progEl) progEl.style.width = `${(clerk.progress / speedTime) * 100}%`;
 
             if (clerk.progress >= speedTime) {
@@ -1209,13 +1220,9 @@ function updateClerks(dt) {
 function serveByClerk(customer) {
     if (!customer || !customer.order) return;
     
-    // Fulfill all orders
-    const itemsToServe = [...(customer.order.remainingOrders || [])];
-    if (itemsToServe.length === 0 && customer.order.item) itemsToServe.push(customer.order.item);
-
-    itemsToServe.forEach(item => {
-        completeFulfillment(customer, true);
-    });
+    // For automated clerks, we treat the entire order (even bulk) as one fulfillment action 
+    // since their progress bar represents the time to complete the whole task.
+    completeFulfillment(customer, true);
 }
 
 window.openClerkUpgrades = (clerkId) => {
