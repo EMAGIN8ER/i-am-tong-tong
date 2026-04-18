@@ -196,6 +196,20 @@ header {
     z-index: 2000;
 }
 
+#tutorial-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5); /* Less dark, no blur on container */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 3000;
+    pointer-events: none; /* Allow clicks to pass to highlights if needed */
+}
+
 .modal-content {
     background: var(--bg-dark);
     backdrop-filter: blur(20px);
@@ -696,3 +710,105 @@ footer {
     font-weight: 700;
     color: var(--accent-primary);
 }
+
+/* Tutorial Styles */
+#tutorial-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--glass-border);
+    color: white;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 800;
+}
+
+#tutorial-content {
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+#tutorial-body {
+    font-size: 1.2rem;
+    line-height: 1.6;
+    margin: 20px 0;
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.tutorial-image {
+    font-size: 4rem;
+    margin-top: 20px;
+    filter: drop-shadow(0 0 10px var(--accent-primary));
+}
+
+.tutorial-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 30px;
+}
+
+#tutorial-next, #tutorial-prev {
+    padding: 12px 30px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 900;
+    cursor: pointer;
+    background: var(--accent-primary);
+    color: black;
+}
+
+#tutorial-prev {
+    background: rgba(255,255,255,0.1);
+    color: white;
+}
+
+#tutorial-step-indicator {
+    font-family: 'Space Grotesk', monospace;
+    font-weight: 800;
+    color: var(--accent-secondary);
+}
+
+/* Feature Highlighting */
+.tutorial-highlight {
+    position: relative;
+    z-index: 3100 !important;
+    outline: 5px solid var(--accent-primary) !important;
+    box-shadow: 0 0 40px var(--accent-primary), 0 0 100px rgba(0, 242, 255, 0.5) !important;
+    animation: pulse-highlight 1.5s infinite !important;
+    pointer-events: auto !important;
+    backdrop-filter: none !important;
+    filter: none !important;
+}
+
+@keyframes pulse-highlight {
+    0% { outline-offset: 0px; box-shadow: 0 0 20px var(--accent-primary); }
+    50% { outline-offset: 10px; box-shadow: 0 0 50px var(--accent-primary); }
+    100% { outline-offset: 0px; box-shadow: 0 0 20px var(--accent-primary); }
+}
+
+/* Adaptive Tutorial Positioning */
+#tutorial-modal .modal-content {
+    pointer-events: auto;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#tutorial-modal.compact .modal-content {
+    max-width: 400px;
+    padding: 20px;
+}
+
+#tutorial-modal.pos-top { align-items: flex-start; padding-top: 100px; }
+#tutorial-modal.pos-bottom { align-items: flex-end; padding-bottom: 140px; }
+#tutorial-modal.pos-right { justify-content: flex-end; padding-right: 50px; }
+#tutorial-modal.pos-left { justify-content: flex-start; padding-left: 100px; }
+#tutorial-modal.pos-center { justify-content: center; align-items: center; }
+
+#tutorial-modal.compact .tutorial-image { font-size: 2.5rem; margin-top: 10px; }
+#tutorial-modal.compact #tutorial-body { font-size: 1rem; min-height: 80px; }
+#tutorial-modal.compact h2 { font-size: 1.2rem; }

@@ -63,6 +63,60 @@ const upgradeList = document.querySelector('.upgrade-list');
 const notifications = document.getElementById('notifications');
 const starShopModal = document.getElementById('star-shop-modal');
 const inventoryModal = document.getElementById('inventory-modal');
+const tutorialModal = document.getElementById('tutorial-modal');
+
+let tutorialStep = 0;
+const tutorialSteps = [
+    {
+        title: "Store Clerk Training",
+        body: "Welcome to Toko Tong Tong! You're the new intergalactic clerk. Let's get you up to speed.",
+        icon: "🚀",
+        target: null,
+        pos: 'center'
+    },
+    {
+        title: "Inventory Bar",
+        body: "Serve customers by clicking items here or pressing keys 1-9. Fulfilling orders earns you Moon Tokens!",
+        icon: "📦",
+        target: "inventory-bar",
+        pos: 'top'
+    },
+    {
+        title: "Stats & Reputation",
+        body: "Track your Moon Tokens and Star Reputation here. If a customer gets too angry and leaves, you'll lose reputation!",
+        icon: "📊",
+        target: "coin-display",
+        pos: 'bottom'
+    },
+    {
+        title: "Operational Permits",
+        body: "Purchase the Neural Permit or Food Permit here to unlock high-tier items like Brains, Fries, and Fruit.",
+        icon: "📜",
+        target: "food-permit-btn",
+        pos: 'bottom'
+    },
+    {
+        title: "Shop Upgrades",
+        body: "Open the UPGRADES menu to increase your Speed Service, Marketing, and Business License multipliers.",
+        icon: "📈",
+        target: "upgrade-menu-btn",
+        pos: 'bottom'
+    },
+    {
+        title: "Star Shop & Potion Vault",
+        body: "Access the Galactic Star Shop and your Potion Inventory on the left. Use potions for massive temporary boosts!",
+        icon: "🧪",
+        target: "star-shop-btn",
+        pos: 'right'
+    },
+    {
+        title: "The Tip Jar",
+        body: "VIPs and happy customers leave tips here. Once it reaches 2500 tokens, claim it for a massive lunar payout!",
+        icon: "🫙",
+        target: "tip-jar-container",
+        pos: 'bottom'
+    }
+];
 
 // Initialization
 function init() {
@@ -625,7 +679,64 @@ function renderActiveBoosts() {
     }
 }
 
+function openTutorial() {
+    tutorialStep = 0;
+    renderTutorialStep();
+    tutorialModal.classList.remove('hidden');
+}
+
+function renderTutorialStep() {
+    const step = tutorialSteps[tutorialStep];
+    
+    // Remove previous highlights and positions
+    document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
+    tutorialModal.classList.remove('pos-top', 'pos-bottom', 'pos-left', 'pos-right', 'pos-center', 'compact');
+    
+    // Add new highlight and position
+    if (step.target) {
+        const el = document.getElementById(step.target);
+        if (el) el.classList.add('tutorial-highlight');
+        tutorialModal.classList.add('compact');
+    }
+    
+    tutorialModal.classList.add(`pos-${step.pos}`);
+
+    document.getElementById('tutorial-title').textContent = step.title;
+    document.getElementById('tutorial-body').innerHTML = `<p>${step.body}</p><div class="tutorial-image">${step.icon}</div>`;
+    document.getElementById('tutorial-step-indicator').textContent = `${tutorialStep + 1} / ${tutorialSteps.length}`;
+    
+    document.getElementById('tutorial-prev').classList.toggle('hidden', tutorialStep === 0);
+    document.getElementById('tutorial-next').textContent = tutorialStep === tutorialSteps.length - 1 ? "FINISH" : "NEXT";
+}
+
 function setupEventListeners() {
+    const tutorialBtn = document.getElementById('tutorial-btn');
+    if (tutorialBtn) tutorialBtn.addEventListener('click', openTutorial);
+    
+    document.getElementById('tutorial-next').addEventListener('click', () => {
+        if (tutorialStep < tutorialSteps.length - 1) {
+            tutorialStep++;
+            renderTutorialStep();
+        } else {
+            localStorage.setItem('tutorialCompleted', 'true');
+            tutorialModal.classList.add('hidden');
+            document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
+        }
+    });
+
+    document.getElementById('tutorial-prev').addEventListener('click', () => {
+        if (tutorialStep > 0) {
+            tutorialStep--;
+            renderTutorialStep();
+        }
+    });
+
+    document.getElementById('close-tutorial-modal').addEventListener('click', () => {
+        localStorage.setItem('tutorialCompleted', 'true');
+        tutorialModal.classList.add('hidden');
+        document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
+    });
+
     const starShopBtn = document.getElementById('star-shop-btn');
     starShopBtn.addEventListener('click', openStarShop);
     document.getElementById('close-star-modal').addEventListener('click', () => {

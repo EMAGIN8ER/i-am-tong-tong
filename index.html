@@ -37,6 +37,7 @@
                 <button id="neural-permit-btn">NEURAL PERMIT (500 🌕)</button>
                 <button id="food-permit-btn">FOOD PERMIT (250 🌕)</button>
                 <button id="upgrade-menu-btn">UPGRADES</button>
+                <button id="tutorial-btn">HELP</button>
             </div>
         </header>
 
@@ -89,12 +90,12 @@
                     <div class="item-icon">🎈</div>
                     <span class="item-label">Balloons</span>
                 </div>
-                <div class="inventory-item locked hidden" data-item="fries" title="French Fries">
+                <div class="inventory-item locked hidden" data-item="fries" title="Galactic Fries">
                     <span class="shortcut">7</span>
                     <div class="item-icon">🍟</div>
                     <span class="item-label">Fries</span>
                 </div>
-                <div class="inventory-item locked hidden" data-item="fruit" title="Fruit">
+                <div class="inventory-item locked hidden" data-item="fruit" title="Lunar Fruit">
                     <span class="shortcut">8</span>
                     <div class="item-icon">🍎</div>
                     <span class="item-label">Fruit</span>
@@ -143,6 +144,25 @@
                     <div id="active-boosts-list"></div>
                 </div>
                 <button id="close-inventory-modal">CLOSE</button>
+            </div>
+        </div>
+
+        <!-- Tutorial Modal -->
+        <div id="tutorial-modal" class="hidden">
+            <div class="modal-content star-modal">
+                <div id="tutorial-content">
+                    <h2 id="tutorial-title">Store Clerk Training</h2>
+                    <div id="tutorial-body">
+                        <p>Welcome to Toko Tong Tong! You're the new intergalactic clerk.</p>
+                        <div class="tutorial-image">🚀</div>
+                    </div>
+                    <div class="tutorial-nav">
+                        <button id="tutorial-prev" class="hidden">BACK</button>
+                        <span id="tutorial-step-indicator">1 / 8</span>
+                        <button id="tutorial-next">NEXT</button>
+                    </div>
+                </div>
+                <button id="close-tutorial-modal">SKIP / EXIT</button>
             </div>
         </div>
 
