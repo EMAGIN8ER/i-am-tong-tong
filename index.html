@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>I Am Tong Tong - Shop Simulator</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Background/Environment -->
+        <div class="shop-background"></div>
+        
+        <!-- UI Overlay -->
+        <header>
+            <div class="stats">
+                <div class="stat-item" id="coin-display">
+                    <span class="icon">🌕</span>
+                    <span class="value">0</span>
+                </div>
+                <div class="stat-item" id="reputation-display">
+                    <span class="icon">⭐</span>
+                    <span class="value">0</span>
+                </div>
+                <div class="stat-item" id="tip-jar-container">
+                    <span class="icon" id="tip-jar-icon">🫙</span>
+                    <div class="tip-jar-bar">
+                        <div id="tip-jar-fill"></div>
+                    </div>
+                    <span id="tip-jar-value">0/2500</span>
+                    <button id="claim-tip-btn" disabled>CLAIM</button>
+                </div>
+            </div>
+            <div class="shop-title">TOKO TONG TONG</div>
+            <div class="header-btns">
+                <button id="neural-permit-btn">NEURAL PERMIT (500 🌕)</button>
+                <button id="food-permit-btn">FOOD PERMIT (250 🌕)</button>
+                <button id="upgrade-menu-btn">UPGRADES</button>
+            </div>
+        </header>
+
+        <button id="star-shop-btn" class="sidebar-tab shop-tab">
+            <div class="shop-tab-text">SHOP</div>
+            <div id="shop-timer">02:30</div>
+        </button>
+
+        <button id="inventory-btn" class="sidebar-tab inv-tab">
+            <div class="shop-tab-text">INVENTORY</div>
+            <div class="potion-count-badge" id="pot-count">0</div>
+        </button>
+
+        <main>
+            <!-- Interaction Area -->
+            <div id="customer-area">
+                <!-- Customers will appear here -->
+            </div>
+        </main>
+
+        <footer>
+            <div id="inventory-bar">
+                <div class="inventory-item" data-item="glop" title="Glop">
+                    <span class="shortcut">1</span>
+                    <div class="item-icon">🧪</div>
+                    <span class="item-label">Glop</span>
+                </div>
+                <div class="inventory-item" data-item="battery" title="Battery">
+                    <span class="shortcut">2</span>
+                    <div class="item-icon">🔋</div>
+                    <span class="item-label">Battery</span>
+                </div>
+                <div class="inventory-item" data-item="spice" title="Spice">
+                    <span class="shortcut">3</span>
+                    <div class="item-icon">🌶️</div>
+                    <span class="item-label">Spice</span>
+                </div>
+                <div class="inventory-item" data-item="circuit" title="Circuit">
+                    <span class="shortcut">4</span>
+                    <div class="item-icon">💾</div>
+                    <span class="item-label">Circuit</span>
+                </div>
+                <div class="inventory-item" data-item="rocket" title="Rocket Ship">
+                    <span class="shortcut">5</span>
+                    <div class="item-icon">🚀</div>
+                    <span class="item-label">Rocket</span>
+                </div>
+                <div class="inventory-item" data-item="balloons" title="Balloons">
+                    <span class="shortcut">6</span>
+                    <div class="item-icon">🎈</div>
+                    <span class="item-label">Balloons</span>
+                </div>
+                <div class="inventory-item locked hidden" data-item="fries" title="French Fries">
+                    <span class="shortcut">7</span>
+                    <div class="item-icon">🍟</div>
+                    <span class="item-label">Fries</span>
+                </div>
+                <div class="inventory-item locked hidden" data-item="fruit" title="Fruit">
+                    <span class="shortcut">8</span>
+                    <div class="item-icon">🍎</div>
+                    <span class="item-label">Fruit</span>
+                </div>
+                <div class="inventory-item locked hidden" data-item="neuralink" title="Neuralink">
+                    <span class="shortcut">9</span>
+                    <div class="item-icon">🧠</div>
+                    <span class="item-label">Neuralink</span>
+                </div>
+            </div>
+        </footer>
+
+        <!-- Modal for Upgrades -->
+        <div id="upgrade-modal" class="hidden">
+            <div class="modal-content">
+                <h2>Shop Upgrades</h2>
+                <div class="upgrade-list">
+                    <!-- Upgrades will be injected here -->
+                </div>
+                <button id="close-modal">CLOSE</button>
+            </div>
+        </div>
+
+        <div id="star-shop-modal" class="hidden">
+            <div class="modal-content star-modal">
+                <h2>Galactic Star Shop</h2>
+                <div id="shop-buy-section">
+                    <p class="refresh-note">Stock refreshes in: <span id="shop-modal-timer">02:30</span></p>
+                    <div id="star-item-list">
+                        <!-- Star items will be injected here -->
+                    </div>
+                </div>
+                <button id="close-star-modal">CLOSE</button>
+            </div>
+        </div>
+
+        <!-- Inventory Modal -->
+        <div id="inventory-modal" class="hidden">
+            <div class="modal-content star-modal">
+                <h2>Your Potion Vault</h2>
+                <div id="inventory-item-list">
+                    <!-- Owned potions will be injected here -->
+                </div>
+                <div class="active-boosts-container">
+                    <h3>Active Boosts</h3>
+                    <div id="active-boosts-list"></div>
+                </div>
+                <button id="close-inventory-modal">CLOSE</button>
+            </div>
+        </div>
+
+        <!-- Active Boosts HUD -->
+        <div id="active-boosts-hud"></div>
+
+        <!-- Notification System -->
+        <div id="notifications"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
